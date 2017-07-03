@@ -1,0 +1,131 @@
+---
+title: "Session 4 - Emailing"
+author: "Leo Hardtke & Andrew Ferris"
+date: "4 July 2017"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+    theme: paper
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, echo=FALSE, warning=FALSE, message=FALSE}
+if(c("gmailr") %in% installed.packages()){
+  library(gmailr)
+} else {
+  install.packages("gmailr", repos = "https://cran.csiro.au/")
+  library(gmailr)
+}
+```
+
+## Emailing
+
+Now that we've made some graphics, performed and statistical analysis and compiled a report, the final stage of the workflow is typically to send this to someone. You might be loading your work to a repository, but most of the time you're emailing this.
+
+Because there are so many different options for email accounts and servers, we're going to stick specifically to using Gmail for several reasons:
+
+* It's free!
+* Anyone can create an account
+* There is a RESTful api so it's easy to use
+* Google developed a package specifically for emailing from within R
+
+The package is the [gmailr](https://cran.r-project.org/web/packages/gmailr/gmailr.pdf) package and allows you to do almost anything you would normally do when using gmail normally. You can send and read email, add attachments, label emails or move them around.
+
+For those who don't normally use gmail, there is a specific package for general emailing called [sendmailR](https://cran.r-project.org/web/packages/sendmailR/sendmailR.pdf) which is a simple general solution for sending emails and works with most clients that I have tried (including @sydney.edu.au, @hotmail.com, @outlook.com @yahoo.com, @anu.edu.au and @mq.edu.au). It is less user-friendly but works well.
+
+#### Creating an Account
+
+Using your web browser, go to [Gmail](gmail.com) and select "Create Account". From there follow the prompts and set up an account. Now go to the [Console Developers Page](https://console.developers.google.com/project) and search for *"Gmail API"*, select *"Enable"*. Then from here instead of setting up the full credentials, you only need to create an API key. Don't set any restrictions on the key.
+
+Once this is created, you won't need to use the web browser again and can go back into the RStudio console.
+
+When you first use a gmailr command, it will prompt you back to the web browser to log in, so let's try reading the messages.
+
+```{r emailing_1, eval=FALSE, warning=FALSE, message=FALSE}
+# Try seeing the messages in the email account
+messages(user_id = "me")
+```
+
+When you sign in and allow the credentials, these will be stored in a local file, so you don't need to request access for the remander of your session.
+
+### Sending an Email
+
+Now we can dive straight into sending an email. Let's try sending a test email, so swap email accounts with the person next to you and use the *mime()* function to create a message object.
+
+```{r emailing_2, eval=FALSE, warning=FALSE, message=FALSE}
+# Create the email message
+email <- mime() %>%
+  from("ferris.andrewg@gmail.com") %>%
+  to("andrew.ferris@sydney.edu.au") %>%
+  subject("Test Email") %>%
+  html_body("Hey did this work?")
+```
+
+Now we've created an email object and we're happy with it, we can now use the *send_message()* function to send the email.
+
+```{r emailing_3, eval=FALSE, warning=FALSE, message=FALSE}
+# Send the email
+send_message(email)
+```
+
+Hopefully everyone should have an email in their inbox!
+
+Now that we've covered the basics, the next step would be to add an attachment in the email. Luckily we only need to add one extra statement to the previous mime to send the attachment. Let's try attaching the rainfall_data_cluster data frame that we created and then sending the email to someone else in the class.
+
+```{r emailing_4, eval=FALSE, warning=FALSE, message=FALSE}
+# Write the rainfall_data_cluster out to csv
+write.csv(rainfall_data_cluster, "rainfall_data_cluster.csv")
+
+# Create the new email message with the attachment
+email_2 <- mime() %>%
+  from("ferris.andrewg@gmail.com") %>%
+  to("andrew.ferris@sydney.edu.au") %>%
+  subject("Test Email with Attachment") %>%
+  html_body("Hey did this work?") %>%
+  attach_file("rainfall_data_cluster.csv")
+
+# Send the email
+send_message(email_2)
+```
+
+Notice that the attachments location by default is from the working directory.
+
+### Reading an Email
+
+Hopefully by this point, every has received an email from someone. So now let's open it up. Previously we used the *messages()* function to return a list of the ten most recent messages. We can see that what this really returned was just a list of message ids.
+
+```{r emailing_5, eval=FALSE, warning=FALSE, message=FALSE}
+# Look at the ten most recent messages in your inbox
+messages(num_results = 10)
+```
+
+Note that from here everyone will have a different message id, but unless you've received a new email in the last 5 minutes, the one you received with an attachment should be at the top of the list. So now we can use the *message()* function to read the full contents of the email.
+
+```{r emailing_6, eval=FALSE, warning=FALSE, message=FALSE}
+# Read the most recent email
+message(id = "15d087342b6639f6", format = "full")
+```
+
+Now we have read the email, but we know it came with an attachment, so we can use the *save_attachments()* function to retreive the attachment and then save this to file.
+
+```{r emailing_7, eval=FALSE, warning=FALSE, message=FALSE}
+# Retreive the attachments from the email and save onto your working directory
+save_attachments(message(id = "15d087342b6639f6"))
+
+# Check the working directory to see if there is the rainfall_data_cluster.csv
+list.files(pattern = "rainfall_data_cluster.csv")
+```
+
+Now we've shown the we can master the basics of emailing from within the R environment. This allows us to complete the R analytics workflow from end to end.
+
+### Challenges
+
+These challenges require you to work in pairs.
+1. Send another email as a reply to the previous email.
+2. With the next email you receive, delete all the emails by using the *delete_thread()* function.
+3. Send a final email, where the body of the email has been written entirely in bold.
