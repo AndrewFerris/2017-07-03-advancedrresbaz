@@ -1,0 +1,90 @@
+---
+title: "Research Bazaar 2017"
+author: "Leo Hardtke & Andrew Ferris"
+date: "4 July 2017"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+    theme: paper
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+library(ggplot2)
+library(shapefiles)
+require(rgdal)
+library(ggmap)
+library(ggthemes)
+library(broom)
+library(shiny)
+# read dataset and remove na's.
+rainfall_raw <- read.csv("datasets/rainfall_bom_data.csv")
+rainfall <- na.omit(rainfall_raw)
+rainfall$date <- as.Date(rainfall$date)
+```
+
+
+## Interactive plotting
+
+There are two main interactive plots types in R:
+
+- Those were you can adjust the zoom level and pan (plotly) and
+- those were you can change the parameters underlying your analysis and see the results immediately (Shiny)
+
+### plotly
+We will start with plotly, since it is easier to understand. Plotly is actually a JavaScript graphing library which was recently open sourced and has 'bindings' for several programming languages including R. It is specialized in creating interactive web-based graphs. Plotly graphs are rendered locally in R through the htmlwidgets framework.
+Using the plot_ly function we could replicate the rainfall boxplot we did with ggplot as follows.
+
+```{r}
+library(plotly)
+plot_ly(rainfall, y = ~rainfall, color = ~name, type="box")
+```
+Fancy! Isn't it? As you can see, plotly graphs are interactive. Click on legend entries to toggle traces, click-and-drag on the chart to zoom, double-click to autoscale, shift-and-drag to pan.
+
+Fortunately we don't need to learn a new syntax thanks to the `ggplotly()` magic, we only need to store the `ggplot` object created by the `ggplot()` function.
+
+```{r}
+g <- ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name), show.legend = F) +
+  facet_wrap(~name) +
+   scale_x_date(date_breaks = "3 months", date_minor_breaks = "1 month", date_labels = "%b-%y", limits =as.Date(c("2016-01-01","2017-01-01"))) +
+  scale_y_continuous("Rainfall [mm]", limits = c(0,300)) +
+  theme_tufte()
+
+ggplotly(g) 
+```
+
+90% accuracy! The only thing that didn't work was `show.legend = F`. The workaround is not very tricky... just add `%>% layout(showlegend = FALSE)` 
+
+```{r}
+g <- ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name), show.legend = F) +
+  facet_wrap(~name) +
+   scale_x_date(date_breaks = "3 months", date_minor_breaks = "1 month", date_labels = "%b-%y", limits =as.Date(c("2016-01-01","2017-01-01"))) +
+  scale_y_continuous("Rainfall [mm]", limits = c(0,300)) +
+  theme_tufte()
+ggplotly(g) %>% layout(showlegend = FALSE)
+```
+
+
+
+### Shiny
+
+Shiny creates more like little applications that you can either add to your interactive documents or embedded in a html document.
+
+Lets see what we can do... 
+
+```{r, cache=F}
+sliderInput("binw", "Bin Width:", min = 1, max = 50, value = 30)
+
+renderPlot({
+  # draw the histogram with the specified number of bins
+  ggplot(data=rainfall) + 
+    geom_histogram(aes(x=rainfall), binwidth = input$binw)
+})
+```
+
+Basically to create a Shiny app we need to define 2 part. The inputs, in this case a slider an then the plot that is wrapped in the `renderPlot()` function. From now on, your imagination is the only limit!

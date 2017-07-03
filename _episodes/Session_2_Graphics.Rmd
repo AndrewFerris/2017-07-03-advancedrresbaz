@@ -1,0 +1,274 @@
+---
+title: "Research Bazaar 2017"
+author: "Leo Hardtke & Andrew Ferris"
+date: "4 July 2017"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+    theme: paper
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+library(ggplot2)
+library(shapefiles)
+require(rgdal)
+library(ggmap)
+library(ggthemes)
+library(broom)
+library(shiny)
+```
+
+```{r}
+# read dataset and remove na's.
+rainfall_raw <- read.csv("datasets/rainfall_bom_data.csv")
+rainfall <- na.omit(rainfall_raw)
+```
+
+# Advanced Graphics
+
+## ggplot bascis
+
+As you probably know in R, there are 3 well established plotting systems plus one notable newcomer. The base plotting systems are lattice, ggplot2 and plotly. During most of this session, we are going to learn how to use ggplot2, which in my experience proved to be very efficient to generate publication quality plots. We will also learn plotly basics for interactive plotting.
+
+Eighty minutes is not enough to cover all the options and customization that ggplot and plotly offer, so I will focus on the main concepts, hoping that it will help you while reading the documentation.
+
+Lets start with ggplot2. This plotting system is built on the paradigm of the **grammar of graphics**. The idea behind it is that any plot can be expressed from the same set of components:
+- data
+- aesthetic mapping
+- geometric object
+- statistical transformations
+- scales
+- coordinate system
+- position adjustments
+- faceting
+
+When plotting with ggplot2, we independently specify the plot building blocks and combine them as layers to create just about any kind of graphical display we want. 
+
+Lets start with a basic example, an histogram of rainfall. We will specify the data, aesthetic mapping and geometric objects.
+
+```{r, fig.width=5, fig.height=3}
+ggplot(data=rainfall) +
+  geom_histogram(aes(x=rainfall)) 
+```
+
+> Exercise: Change the binwidth to 50
+
+```{r, echo=FALSE, include=F}
+ggplot(data=rainfall) +
+  geom_histogram(aes(x=rainfall),binwidth = 50) 
+```
+
+The syntax for the plot could look wired if you are used to work primarily with the base plotting system. The most notable difference is that, unlike the base plots, ggplot works with dataframes and not individual vectors (i.e.. dataframe columns). This is not evident in this example, but keep it in mind for later. Lets try to understand the syntax:
+
+- First thing we do is call the ggplot function. This function lets R know that we are creating a new plot, and any of the arguments we give to the ggplot function are the **global options** for the plot (i.e they apply to all layers on the plot).
+- In this simple case we’ve passed in only one arguments, the data we want to show on our figure.
+- We use the `+` sign to add layers to the plot.
+- We specify the geometric object, an histogram in this case and,
+- we define the aesthetics. For this particular geometric object, we only need to define which variable goes in the x axis.
+
+
+## ggplot building blocks
+
+Lets talk a bit more about the **building blocks**.
+
+### aesthetics
+In ggplot land *aesthetic* means "something you can see". Examples include:
+
+- *position*, on the x and y axes
+- *colour* 
+- *fill* 
+- *shape* 
+- *linetype*
+- *size*
+
+Each type of geometric object accepts/requires different subsets of aesthetics. The geom help pages is the best resource to find out what aesthetics each geom accepts. Aesthetic mappings are set with the `aes()` function.
+
+### Geometric objects
+*Geometric objects* are the actual objects we put on the plot. There are more than 50 available, some of the most commonly used include:
+
+- geom_bar for barcharts
+- geom_boxplot for boxplot
+- geom_point for points
+- geom_lines for lines
+
+
+
+### Boxplots
+Let's create a boxplot of rainfall for each location.
+
+```{r, fig.width=9, fig.height=3, echo=FALSE}
+ggplot(data=rainfall) +
+  geom_boxplot(aes(x=name, y=rainfall, fill=name)) 
+```
+
+Analysing the syntax you can see that, compared to the histogram, we now passed 2 more arguments in `aes()`. We told ggplot that we want the `rainfall` in the y axis and with the argument `fill` we say that we want to group our data by the `name` column.
+
+### Barplots
+
+The previous plot is probably not the best way to represent this type of data, so let's try something else. We will make a bar plot of the mean rainfall for each location. This example will help us to understand some of the 'advanced' parameters of the geometric objects.
+
+```{r, fig.width=9, fig.height=3}
+ggplot(data=rainfall) +
+  geom_bar(aes(x=name, y=rainfall, fill=name), stat = "summary", fun.y = "mean") 
+```
+
+What is new in this one? We pass 2 new handy arguments to the geometric object. `stat = "summary"` and `fun.y = "mean"` with obvious results.
+
+
+> Challenge: Now that you learned a bit more, try to replicate the following plot.
+
+```{r, echo=FALSE, include=F}
+ggplot(data=rainfall) +
+  geom_histogram(aes(x=rainfall, fill=name),binwidth = 20) 
+```
+
+In the previous exercise you overlayed the histogram for each group, but what if we want to split the plot, and have one for each group? That is when faceting enters the field.
+
+## Facets
+Faceting generates small sub-plots, each one displaying a different subset of the data. Facets are an alternative to aesthetics for displaying data by groups.
+
+There are two kind of facets:
+
+- facet_grid: forms a matrix of panels defined by row and column faceting variables. It is most useful when you have two discrete grouping variables, and all combinations of the variables exist in the data.
+- facet_wrap: Wraps a 1d ribbon of panels into 2d, which is most useful when you have 1 grouping variable.
+
+
+```{r, fig.width=6, fig.height=6}
+ggplot(data=rainfall) +
+  geom_histogram(aes(x=rainfall, fill=name)) + 
+  facet_wrap("name")
+```
+
+> Challenge: As each group has its own plot with a label, we do not need the legend any more. Try to find out how to remove the legend as in the following plot.
+
+```{r, echo=FALSE}
+ggplot(data=rainfall) +
+  geom_histogram(aes(x=rainfall, fill=name), show.legend = F) + 
+  facet_wrap(~name, scales = "free_y") 
+```
+
+You can tweak the labels using faceting labeller. See [this link](http://ggplot2.tidyverse.org/reference/labeller.html) for more details
+
+
+Lets learn another geometry, geom_line, to plot the rainfall time series. A first attempt could be:
+
+```{r, cache=T}
+ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name)) 
+```
+
+Something went really wrong here... The problem is that the date column is a factor, and to plot a time series we need to specify a date/time/datetime object. Let see if we can fix it...
+
+```{r}
+rainfall$date <- as.Date(rainfall$date)
+ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name)) 
+```
+
+This is better, but still difficult to interpret. So, here comes the next exercise, try to improve the previous plot using facets.
+
+```{r, echo=F, cache=T}
+ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name), show.legend = F) +
+  facet_wrap(~name)
+```
+
+
+## Scales
+
+We didn't use scales so far... lets see what they are useful for.
+
+Scales will control the details of how data values are translated into visual properties. You can override the default scales to tweak details like the axis labels or legend keys, or to use a completely different translation from data to aesthetic. For example:
+
+- `labs()`, `xlab()`, `ylab()` and `ggtitle()` will modify axis, legend, and plot labels.
+- `lims()`, `xlim()` and `ylim()` will set scale limits.
+- `scale_x_continuous()` or `scale_y_continuous()`, will set the labels, limits, major, minor breaks for continuous variables.
+- `scale_x_discrete()` or `scale_y_discrete()`. Same as above but with discrete variables.
+- `scale_x_date/time/datetime scale_y_date/time/datetime()`, will tweak date time and datatime variables axis.
+
+Let's plot the last year of the rainfall dataset and tweak the x axis a bit to understand how it works.
+
+```{r, cache=T}
+ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name), show.legend = F) +
+  facet_wrap("name") +
+  scale_x_date(date_breaks = "3 months", date_minor_breaks = "1 month", date_labels = "%b-%y", limits =as.Date(c("2016-01-01","2017-01-01")))
+```
+Another use for scales, is to define the axis labels and limits.
+
+> Challenge: try to replicate the following plot.
+
+```{r, echo = FALSE, cache=T}
+ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name), show.legend = F) +
+  facet_wrap(~name) +
+  scale_x_date(date_breaks = "3 months", date_minor_breaks = "1 month", date_labels = "%b-%y", limits =as.Date(c("2016-01-01","2017-01-01"))) +
+  scale_y_continuous("Rainfall [mm]", limits = c(0,250))
+```
+
+## Themes
+
+Themes control the display of all non-data elements of the plot. You can override all settings with a complete theme like `theme_bw()` or `theme_light()`. The package ggthemes has very nice options. You can also choose to tweak individual settings by using the `theme()` function with its more than 70 arguments!. You can use `theme_set()` to modify the active theme which also affects all the future plots.
+
+> Challenge: Have a look at some of the built in themes. For example the next plot, uses theme_tufte()
+
+```{r, cache=T}
+library(ggthemes)
+ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name), subset(rainfall, date>"2016-01-01"), show.legend = F) +
+  facet_wrap(~name) +
+  scale_x_date("Dates", date_breaks = "4 months", date_minor_breaks = "1 month", date_labels = "%b-%y") +
+  scale_y_continuous("Rainfall [mm]", limits = c(0,300)) +
+  theme_tufte()
+```
+
+> Challenge: use theme() to Set the title of the plot, the axis labels and add a light grey grid to the plot.
+
+```{r, echo=FALSE, cache=T}
+library(ggthemes)
+ggplot(data=rainfall) +
+  geom_line(aes(x=date, y=rainfall, color=name), subset(rainfall, date>"2016-01-01"), show.legend = F) +
+  facet_wrap(~name) +
+  scale_x_date( date_breaks = "4 months", date_minor_breaks = "1 month", date_labels = "%b-%y") +
+  scale_y_continuous( limits = c(0,300)) +
+  theme_tufte() +
+  theme(title = element_text("Time series plot"), axis.title.x = element_text("Dates"), axis.title.y = element_text("Rainfall [mm]"), panel.grid.major = element_line(colour = "grey75"))
+```
+
+## Spatial visualization
+
+R, and in particular ggplot, can also be used for GIS plotting. Lets start with a simple map of Australia using a polygon geometry. As mentioned before, ggplot can only plot dataframes, which is not the common format for GIS data; so after importing your shapefile, you will need to transform the SpatialPolygonsDataFrame created by the `shapefile()` function to a dataframe. The `tidy()` function of the broom package is the recommended tool.
+
+```{r}
+oz <- readOGR(dsn='datasets', layer="oz_map")
+oz_df <- tidy(oz)
+
+ggplot(oz_df ) +
+  geom_polygon(aes(x = long, y = lat, group = group),
+  color = '#fc4e2a', fill = '#d9f0a3', size = .2) +
+  coord_map(projection = "mercator")
+```
+
+> Challenge: Add the location of the sampling points and change the zoom level.
+
+```{r, echo=F}
+ggplot(oz_df ) +
+  geom_polygon(aes(x = long, y = lat, group = group),
+  color = '#fc4e2a', fill = '#d9f0a3', size = .2) +
+  coord_map(projection = "mercator", xlim = c(145,155), ylim=c(-40,-31)) +
+  geom_point(data = rainfall, aes(x = longitude, y = latitude, color = name), size = 2)
+```
+
+> Challenge: Remove the legend and replace it for labels near the points
+
+There is also a very handy helping package, ggmap. It allows you to use Google, osm or stamen layers as background for your plots. For example
+
+```{r}
+qmap(location = c(145,-40,155,-31), zoom=6, maptype="satellite") +
+  geom_point(data = rainfall, aes(x = longitude, y = latitude, color = name), size = 2)
+```
+
