@@ -2,7 +2,12 @@
 title: "Session 3 - Statistical Methods"
 author: "Leo Hardtke & Andrew Ferris"
 date: "07/03/17"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+    theme: paper
 ---
 
 ```{r setup, include=FALSE}
