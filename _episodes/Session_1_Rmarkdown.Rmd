@@ -1,0 +1,225 @@
+---
+title: "Research Bazaar 2017"
+author: "Leo Hardtke & Andrew Ferris"
+date: "4 July 2017"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+    theme: paper
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(pander)
+library(ggplot2)
+rainfall <- na.omit(read.csv("datasets/rainfall_bom_data.csv"))
+```
+
+# Dynamic documents
+
+Dynamic reports are documents that include include formatted text, code, and the results of the analysis performed, all in one place. In contrast, the 'traditional' way to write a report is save your analysis from R first, i.e. saving the tables as plain text, then save the plots and paste them both in the document processor. A report written in this way could sometimes be problematic. For instance, imagine your found that that you forgot to include some samples in the input dataset, you would have to redo all of your work! It also could be that you need to perform the same analysis for different datasets and let's say present a monthly report... With dynamic documents, you will only need to change the input dataset! 
+
+So, why should you use dynamic reports? They are a great way to collaborate with colleagues, especially when combined wit GIT. They could help to keep your research organized and avoiding copy/paste errors, and also to do reproducible research. Reproducible research is a key part of the scientific method. Reproducibility is the ability of an entire analysis of an experiment or study to be duplicated, either by the same researcher or by someone else working independently, whereas reproducing an experiment is called replicating it. In addition, reproducibility makes an analysis more useful to others because the data and code that actually conducted the analysis are available.
+
+
+## How to produce dynamic reports in R.
+
+Long story short, you write a *plain text file* with formatting in markdown including your code. This file is processed by `knitr` which executes all of the code chunks and creates a new markdown document which includes the code and it’s output. The resulting markdown output is processed by `pandoc` which is responsible for creating the report in its finished format (html, pdf, odt, doc, etc). This may sound very complicated, but the `rmarkdown` packages makes it extremely simple by encapsulating all of the above processing into a single `render()` function.
+
+So, what exactly is the rmakrdown package?
+rmarkdown is an easy to use authoring framework that implements Markdown in R based on pandoc, to weave together narrative text and code. You can include R code, as well as Python, Bash and SQL and also lets you include nicely-typeset formulas, tables, hyperlinks and images. You will then use use a single rmarkdown document to both:
+
+    - save and execute code
+    - generate high quality reports that can be shared with an audience
+    
+
+
+## Parts of the rmarkdown document
+
+### Markdown text
+
+Markdown is a lightweight markup language.  It consists of ordinary text, plus signs which indicate how to change the formatting or meaning of the text.  Some mark-up languages, like HTML (Hyper-Text Markup Language) use very obtrusive markup; others, like the language called Markdown, are more subtle. You are probably used to word processing programs, which employ the “what you see is what you get” (WYSIWYG) principle: where the format is shown right there on the screen. The advantages of mark-up languages are many: they tend to be more portable across machines, less beholden to particular software companies, and more stable over time than WYSIWYG word processing programs.
+
+The key design goal of Markdown was readability, without looking like it has been marked up with tags or formatting instructions,unlike text formatted with a markup language, such as HTML, which have obvious tags and formatting instructions. To this end, its main inspiration is the existing conventions for marking up plain text in email, though it also draws from earlier markup languages, notably setext, Textile, and reStructuredText.
+
+The basic Markdown syntax is really intuitive and easy to learn. A few examples:
+
+```
+# Heading
+
+## Sub-heading
+
+### Another deeper heading
+
+Paragraphs are separated
+by a blank line.
+
+Two spaces at the end of a line leave a  
+line break.
+
+Text attributes _italic_, *italic*, __bold__, **bold**, `monospace`.
+
+Horizontal rule:
+
+---
+
+Formulas
+$$y = x^2 $$
+
+Bullet list:
+
+  * apples
+  * oranges
+  * pears
+
+Numbered list:
+
+  1. apples
+  2. oranges
+  3. pears
+
+A [link](http://example.com).
+```
+
+### Front-matters
+rmarkdown documents will include an initial chunk of text contains instructions for `pandoc` giving the document title, author, and date, and output format among other possible instructions. For example:
+
+```
+---
+title: "Learning R Markdown"
+author: "John Doe"
+date: "July 04, 2017"
+output: html_document
+---
+```
+
+Some of the most used options are:
+
+- `output:` to define the output format (HTML, pdf, Libreoffice, Word or RTF)
+- `toc: true` to include a table of contents, you can also set the depth with `toc_depth: 2` 
+- `number_sections: true` to add numbering to section headers
+- `css: styles.css` if working with html, to change the stylesheet. 
+- `latex options` if working on a pdf, you can customize most aspects of the LaTeX template.  [See for more options](http://rmarkdown.rstudio.com/pdf_document_format.html) 
+- `fig_width:` and `fig_height:` can be used to control the default figure width and height (6 x 4.5 is used by default)
+- `fig_caption: ` to render figures with captions (this is false by default).
+
+> Challenge:
+ Create a new R document. Save it as Rmd.
+ Write the fron-matters
+ Write a bit of Markdown (some sections, some italicized text, and an itemized list).
+ 
+
+### Code
+
+The real point of rmarkdown is that it lets you include your code, have the code run automatically when your document is rendered, and seamlessly include the results of that code in your document. The code can be included in two varieties, **code chunks** and **inline code**.
+
+To distinguish code from text, R Markdown uses back-ticks. A code chunk is simply a piece of code by itself in a separated paragraph. If you want to include code chunks, you need to use three back-ticks followed by `{r name, option=value}`, then type your code as usual and close the chunk with three more back ticks. In R studio you can use the control-alt-i (or command-option-i in mac) to create a code chunk.
+
+Below is an example code chunk. As you can see, rendering the chunk will result in the code being highlighted for R syntax and the output being included below the code.
+
+```{r sample_code_chunk, echo=T}
+x <- 10
+y <- 10
+z <- x + y
+z
+```
+
+Code output can also be seamlessly incorporated into the text, using inline code. Inline code should be wrapped with one back-ticks and will be replaced by its output when rendered. For example: r 1+1, will be replaced by `r 1+1`. 
+
+Chunk output can be customized with knitr options, arguments set in the `{}` of a chunk header or as global options in your first code chunk. Some of the most common parameters are:
+
+- include = FALSE prevents code and results from appearing in the finished file. R Markdown still runs the code in the chunk, and the results can be used by other chunks.
+- echo = FALSE prevents code, but not the results from appearing in the finished file. This is a useful way to embed figures.
+- message = FALSE prevents messages that are generated by code from appearing in the finished file.
+- warning = FALSE prevents warnings that are generated by code from appearing in the finished.
+- fig.cap = "..." adds a caption to graphical results.
+- cache=  If document rendering becomes time consuming due to long computations you can use knitr caching to improve performance.
+
+
+Global options that apply to every chunk in your file, can be added by calling `knitr::opts_chunk$set` in your firsts code chunk. Knitr will treat each option that you pass to `knitr::opts_chunk$set` as a global default that can be overwritten in individual chunk headers.
+
+For example: `knitr::opts_chunk$set(echo = TRUE, cache=TRUE)` 
+
+* Best practice tips * 
+
+Remember that rmarkdown documents are self-contained, so any data or package you use must be loaded in that document. R will not look in the environment variables for any data or functions. 
+
+- Load the libraries and datasets in a code-chunk at the beginning of your document and perhaps also set there the options for the whole document. You may or may not want to include this code in the output. If not, you can give it the option include = FALSE.
+
+- Avoid absolute paths. I mean, don’t ever use something like `/home/leo/paper_x/dataset/raw_data.csv` or even `~/paper_x/dataset/raw_data.csv`. When someone else tries to reproduce your document, they won’t have a `/home/leo/paper_x/dataset/raw_data.csv` directory.
+
+- Keep all of the data within one branch of your file system: some root directory where you save the `.Rmd` file and its subdirectories. By that I mean, encapsulate the full project into one directory (e.g `/home/leo/paper_x`), and use relative paths (like `dataset/raw_data.csv`) in the code.
+
+- Include your “session info” in your document, preferably at the bottom: this lists the version of R that you’re using plus all of the packages you’ve loaded. There’s a `sessionInfo()` that’s included with base R (in the utils package), but I recommend instead using `session_info()` from the devtools package as it provides more detailed information in a nicer layout.
+
+If you do any sort of simulation in the document, consider adding a call to set.seed in the first code chunk. I usually open R and type runif(1, 0, 10^8) and then paste the resulting large number into set.seed() in the first code chunk. If you do this, then the random aspects of your analysis should be repeated the same way exactly whenever it is “knit.”
+
+
+### Figures:
+
+Figures are very easy to include. If a code chunk produces a figure, the figure will be automatically produced and inserted into the final document. If a code chunk produces a bunch of figures, then a bunch of image files will be produced and inserted into the final document. You can change the way they are included with the chunk options.
+
+For example:
+
+```{r hist, fig.width=5, fig.height=3, fig.cap= "Histogram of rainfall data for 7 different locations in NSW"}
+ggplot(data=rainfall) +
+  geom_histogram(aes(x=rainfall, fill=name),binwidth = 20, show.legend = F) 
+```
+### Tables
+
+#### Kable
+
+If you want to render a nice table, the simplest approach is to use the `kable()` function in the `knitr` package. It doesn’t have many options, but in many cases it’s sufficient. Here’s an example.
+
+```{r}
+kable(head(rainfall), digits = 2)
+```
+
+Kable will accept a matrix or data frame as input. you can set the maximum number of digits with the `digit` parameter; whether or not include row and column names (row.names and col.names) 
+
+
+#### Pander 
+
+For a finer control on the output format, use the `pander()` function from the pander package.The pander R package provides helping functions for rendering R objects into Pandoc's markdown, being one of the most popular feature  rendering  tabular R objects into markdown tables with various options and settings (e.g. style, caption, cell highlighting, cell alignment, width). 
+
+Let's start with a small example:
+```{r}
+pander(head(rainfall), caption = "Example table caption")
+```
+
+One of the fanciest features in pander is the ease of highlighting rows, columns or any cells in a table. This can be achieved by passing any (or more) of the following arguments.
+
+- emphasize.italics.rows
+- emphasize.italics.cols
+- emphasize.italics.cells
+- emphasize.strong.rows
+- emphasize.strong.cols
+- emphasize.strong.cells
+- emphasize.verbatim.rows
+- emphasize.verbatim.cols
+- emphasize.verbatim.cells
+
+Lets say we want to show the date in italics and emphasize the rows with rainfall greater than 10
+```{r}
+t <- head(rainfall)
+emphasize.italics.cols(1)
+emphasize.strong.rows(which(t$rainfall>10))
+pander(t, split.table=120, split.cell=15)
+
+```
+
+You can specify the alignment of the cells (left, right or center/centre) in a table directly by setting the justify parameter. pandoc.table can also deal with the problem of really wide tables by splitting them up with auto-added captions. The split.table option defaults to 80 characters.
+
+And too wide cells can also be split by line breaks. The maximum number of characters in a cell is specified by split.cells parameter (default to 30), can be a single value, vector (values for each column separately) and relative vector (percentages of split.tables parameter):
+
+> Challenge:Add a figure and a table to the Rmarkdown file you created before.
+
+
+----
+
+```{r session_info, include=TRUE, echo=TRUE, results='markup'}
+devtools::session_info()
+```
