@@ -1,0 +1,119 @@
+---
+title: "Setup & Installation"
+author: "Leo Hardtke & Andrew Ferris"
+date: "7/3/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Install Packages
+
+Please run the below code the download and install the packages that will be used in today's course.
+
+```{r install_packages, eval=FALSE, warning=FALSE, message=FALSE}
+if(c("broom") %in% installed.packages()){
+  library(broom)
+} else {
+  install.packages("broom", repos = "https://cran.csiro.au/")
+  library(broom)
+}
+if(c(shiny) %in% installed.packages()){
+  library(shiny)
+} else {
+  install.packages("shiny", repos = "https://cran.csiro.au/")
+  library(shiny)
+}
+if(c("ggthemes") %in% installed.packages()){
+  library(ggthemes)
+} else {
+  install.packages("ggthemes", repos = "https://cran.csiro.au/")
+  library(ggthemes)
+}
+if(c("ggmap") %in% installed.packages()){
+  library(ggmap)
+} else {
+  install.packages("ggmap", repos = "https://cran.csiro.au/")
+  library(ggmap)
+}
+if(c("rgdal") %in% installed.packages()){
+  library(rgdal)
+} else {
+  install.packages("rgdal", repos = "https://cran.csiro.au/")
+  library(rgdal)
+}
+if(c("shapefiles") %in% installed.packages()){
+  library(shapefiles)
+} else {
+  install.packages("shapefiles", repos = "https://cran.csiro.au/")
+  library(shapefiles)
+}
+if(c("pander") %in% installed.packages()){
+  library(pander)
+} else {
+  install.packages("pander", repos = "https://cran.csiro.au/")
+  library(pander)
+}
+if(c("tree") %in% installed.packages()){
+  library(tree)
+} else {
+  install.packages("tree", repos = "https://cran.csiro.au/")
+  library(tree)
+}
+if(c("tree") %in% installed.packages()){
+  library(tree)
+} else {
+  install.packages("tree", repos = "https://cran.csiro.au/")
+  library(tree)
+}
+if(c("cluster") %in% installed.packages()){
+  library(cluster)
+} else {
+  install.packages("cluster", repos = "https://cran.csiro.au/")
+  library(cluster)
+}
+if(c("data.table") %in% installed.packages()){
+  library(data.table)
+} else {
+  install.packages("data.table", repos = "https://cran.csiro.au/")
+  library(data.table)
+}
+if(c("lubridate") %in% installed.packages()){
+  library(lubridate)
+} else {
+  install.packages("lubridate", repos = "https://cran.csiro.au/")
+  library(lubridate)
+}
+if(c("pscl") %in% installed.packages()){
+  library(pscl)
+} else {
+  install.packages("pscl", repos = "https://cran.csiro.au/")
+  library(pscl)
+}
+if(c("ROCR") %in% installed.packages()){
+  library(ROCR)
+} else {
+  install.packages("ROCR", repos = "https://cran.csiro.au/")
+  library(ROCR)
+}
+if(c("dplyr") %in% installed.packages()){
+  library(dplyr)
+} else {
+  install.packages("dplyr", repos = "https://cran.csiro.au/")
+  library(dplyr)
+}
+if(c("ggplot2") %in% installed.packages()){
+  library(ggplot2)
+} else {
+  install.packages("ggplot2", repos = "https://cran.csiro.au/")
+  library(ggplot2)
+}
+if(c("gmailr") %in% installed.packages()){
+  library(gmailr)
+} else {
+  install.packages("gmailr", repos = "https://cran.csiro.au/")
+  library(gmailr)
+}
+```
