@@ -1,0 +1,376 @@
+---
+title: "Session 3 - Statistical Methods"
+author: "Leo Hardtke & Andrew Ferris"
+date: "07/03/17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, echo=FALSE, warning=FALSE, message=FALSE}
+if(c("tree") %in% installed.packages()){
+  library(tree)
+} else {
+  install.packages("tree", repos = "https://cran.csiro.au/")
+  library(tree)
+}
+if(c("cluster") %in% installed.packages()){
+  library(cluster)
+} else {
+  install.packages("cluster", repos = "https://cran.csiro.au/")
+  library(cluster)
+}
+if(c("data.table") %in% installed.packages()){
+  library(data.table)
+} else {
+  install.packages("data.table", repos = "https://cran.csiro.au/")
+  library(data.table)
+}
+if(c("lubridate") %in% installed.packages()){
+  library(lubridate)
+} else {
+  install.packages("lubridate", repos = "https://cran.csiro.au/")
+  library(lubridate)
+}
+if(c("pscl") %in% installed.packages()){
+  library(pscl)
+} else {
+  install.packages("pscl", repos = "https://cran.csiro.au/")
+  library(pscl)
+}
+if(c("ROCR") %in% installed.packages()){
+  library(ROCR)
+} else {
+  install.packages("ROCR", repos = "https://cran.csiro.au/")
+  library(ROCR)
+}
+if(c("dplyr") %in% installed.packages()){
+  library(dplyr)
+} else {
+  install.packages("dplyr", repos = "https://cran.csiro.au/")
+  library(dplyr)
+}
+if(c("ggplot2") %in% installed.packages()){
+  library(ggplot2)
+} else {
+  install.packages("ggplot2", repos = "https://cran.csiro.au/")
+  library(ggplot2)
+}
+```
+
+```{r data, echo=FALSE, warning=FALSE, message=FALSE}
+# Load the rainfall data
+rainfall_data <- fread("/Users/andrewferris/Documents/ResBaz/datasets/rainfall_bom_data.csv", header = TRUE, stringsAsFactors = FALSE)
+rainfall_data <- rainfall_data[complete.cases(rainfall_data) == TRUE, ]
+rainfall_data$date <- as.Date(as.character(rainfall_data$date, "%Y-%m-%d"))
+rainfall_data$latitude <- as.numeric(rainfall_data$latitude)
+rainfall_data$longitude <- as.numeric(rainfall_data$longitude)
+```
+
+### Statistical Methods
+
+After descriptive and graphical analysis, applying statistical methods is the next step in any quantitative analysis. Typically there are three main types of statistical analysis, these are:
+
+* Regression - Estimating the relationship between a given set of independent variables and an outcome or dependent variable
+* Classification - Identifying which category an observation is most likely to belong to based on some underlying criteria
+* Clustering - Combining subjects or observations into groups (clusters) so that subjects or observations in the same group are more similar to each other than subjects or observations in other groups
+
+In this session, we will cover an example of each and how they can be implemented in the R programming language. 
+
+**Note:** This session is strictly about the implementation of statistical methods and not about the underlying mechanics of the methods themselves. This means that we will not be commenting on the mathematics or pros and cons of each technique.
+
+### Regression Analysis
+
+#### Binary Logistic Regression
+
+Logistic regression is a specific type of regression used to fit a curve when the outcome variable in categorical (or in this case binary). Logistic regression is one of the most common statistical techniques which is used is almost every field. In the below example, we will re-classify the date to a binary variable to see if there is a relationship between rainfall, elevation and if it is summer (December, January, February).
+
+Firstly we need to recode the date variable to binary so that can be fed into the regression.
+
+```{r regression_1, warning=FALSE, message=FALSE}
+# Create the empty column date_binary
+rainfall_data$date_binary <- NULL
+
+# Set date_binary to 1 where the month is equal to 12, 1 or 2
+rainfall_data$date_binary[month(rainfall_data$date) %in% c(12, 1, 2)] <- 1
+
+# Set date_binary to 0 for all other months
+rainfall_data$date_binary[month(rainfall_data$date) %in% c(3, 4, 5, 6, 7, 8, 9 ,10, 11)] <- 0
+
+# Show a table of date and date_binary to confirm this is correct
+table(month(rainfall_data$date), rainfall_data$date_binary)
+
+# Make sure the rainfall and elevation variables are numeric
+rainfall_data$rainfall <- as.numeric(rainfall_data$rainfall)
+rainfall_data$elevation <- as.numeric(rainfall_data$elevation)
+```
+
+Now that we have our outcome variable ready, we are ready to create the logistic regression. To do this we will be using the *glm()* function which is included in the stats package. GLM stands for Generalised Linear Models, of which one is a binary logistic regression. There are several arguments we can pass to this function, but we will be specifying the following:
+
+* Formula: an object of the structure y ~ x, y is the outcome variable (date_binary) and the x are the set of independent variables (rainfall and elevation)
+* Family: a description of the error distribution (binomial) and link function (logit)
+* Data: the data frame used
+
+You should be aware that there are many other options available for making more specific regressions. For example, if you wanted to apply weightings dependent on a specific group you could specify this in the *weights* argument. To explore all the arugments available in the glm function you can type *?glm* and the help screen will appear.
+
+```{r regression_2, warning=FALSE, message=FALSE}
+# Creating the regression model
+glm_model <- glm(formula = date_binary ~ rainfall + elevation, family = binomial(link = "logit"), data = rainfall_data)
+
+# Show a summary of the model created
+summary(glm_model)
+```
+So now that we've successfully created our model, and taken a look at the summary, how do we interpret all this output?
+
+If we look at the Coefficients table, we can see that both rainfall and elevation are highly statistically significant predictors of summer.
+The estimates of the coefficients for rainfall is only slightly above zero, indicating that for all other variables being equal, an increase in rainfall makes it more likely for the date to be in summer. Where as with an increase in elevation would mean it would be less likely for the date to be in the summer time.
+
+Next we can use the *anova()* function to analyse the table of deviance.
+
+```{r regression_3, warning=FALSE, message=FALSE}
+# Use the anova() function on our glm_model
+anova(glm_model, test = "Chisq")
+```
+
+From this table, there are three main takeaways. Firstly we can compare the Residual Deviance as we add variables to the model. This is a way of comparing our model with the variables included versus just a model with the intercept (NULL). Typically the larger the gap the better. As we can see there is only a slight drop in the Residual Deviance when you begin to include rainfall and elevation, meaning the model has only slightly improved. This is an interesting result as the p-values in the far right column are highly significant.
+
+After this we can measure the overall quality of the fit of the model using an equivalent of the R^2^ for logistic regression. Using the *pscl* library, we can return the McFadden R^2^. With any R^2^ value, the closer to one the better the fit.
+
+```{r regression_4, warning=FALSE, message=FALSE}
+# Return McFadden's R^2 value using the pR2 function
+pR2(glm_model)
+```
+
+As you can see from the above, the overall fit is very poor, meaning that the model we have developed would not have very strong predictive power.
+
+For a final step, we can inspect the structure of the model using *str()* and then take a look at the AIC, which is an estimate of the quality of the model for model selection purposes.
+
+```{r regression_5, warning=FALSE, message=FALSE}
+# Print the structure of glm_model
+str(glm_model)
+
+# Return the AIC
+glm_model$aic
+```
+
+##### Challenege
+
+Re-run the logistic regression, but this time with latitude and longitude included.
+Call this model *glm_model_2*.
+
+1. Now that there are two new variables, how does this effect the significance of all the variables in the model?
+2. Return the McFadden R^2^ of the new model, how has this changed?
+3. Compare the AIC of the two models, which one would you select?
+4. Return a histogram of the fitted values in the new model, how would you interpret this?
+
+```{r challenge_1, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+# Create glm_model_2
+glm_model_2 <- glm(formula = date_binary ~ rainfall + elevation + latitude + longitude, family = binomial(link = "logit"), data = rainfall_data)
+
+# 1. Return the summary of glm_model_2 to show the p-values of the model
+summary(glm_model_2)
+
+# 2. Use pR2 to evaluate McFadden's R^2
+pR2(glm_model_2)
+
+# 3. Compare the AIC values of glm_model and glm_model_2
+c(glm_model$aic, glm_model_2$aic)
+
+# 4. Create a histogram of fitted.values in glm_model_2
+hist(glm_model_2$fitted.values)
+```
+
+### Classification Analysis
+
+#### Classification Trees
+
+Classification trees are a method of recursive partitioning, that is iteratively splitting a population into subgroups based on independent variables. In this example, we will use a very simple classification tree in the *tree* library to help classify the month based on the rainfall, latitude, longitude and elevation. In the *tree* library, we also use the *tree()* function, which is the main function in this package. We need to specify the following arguments.
+
+* formula: a y ~ x formula where y is the dependent/outcome variable and x is a set of independent variables
+* data: the data frame
+* split: the criteria by which to split the tree into several branches
+* control: controlling parameters for splitting the tree, specifically mincut, mindev and nobs
+  * mincut: the minimum number of observations to use to allow a cut
+  * mindev: the minimum within-node deviance before allowing a split
+  * nobs: the number of observations
+* x: the matrix of variables
+* y: the response variable
+
+Before doing this however, lets make a working dataset.
+
+```{r classification_1, warning=FALSE, message=FALSE}
+# Make a subset for the classification with just date and rainfall variables
+rainfall_data_class <- rainfall_data[,c("date", "rainfall", "latitude", "longitude", "elevation")]
+
+# Set the date variable to be the month of the date
+rainfall_data_class$month <- month(rainfall_data_class$date)
+
+# Ensure all the independent variables are numeric
+rainfall_data_class$rainfall <- as.numeric(rainfall_data_class$rainfall)
+rainfall_data_class$latitude <- as.numeric(rainfall_data_class$latitude)
+rainfall_data_class$longitude <- as.numeric(rainfall_data_class$longitude)
+rainfall_data_class$elevation <- as.numeric(rainfall_data_class$elevation)
+
+# Ensure that month is a factor
+rainfall_data_class$month <- as.factor(rainfall_data_class$month)
+
+# View the first ten rows
+rainfall_data_class[1:10,]
+```
+
+Ok, now that we have the correct data ready to go, we can run the rpart model and then use *summary()* to show some output. But first we should set the random seed to ensure the analysis we do is reproducible.
+
+```{r classification_2, warning=FALSE, message=FALSE}
+# Set the random seed
+set.seed(5)
+
+# Generate the tree_model
+tree_model <- tree(formula = month ~ rainfall + latitude + longitude + elevation, data = rainfall_data_class, control = tree.control(mincut = 1, nobs = nrow(rainfall_data_class), mindev = 0.0001), x = TRUE, y = TRUE)
+
+# Produce a summary of the model
+summary(tree_model)
+```
+
+We can see that we've generated some output, which we will soon explore, but firstly lets make a graphic of the tree using the *plot()* function.
+
+```{r classification_3, warning=FALSE, message=FALSE}
+plot(tree_model)
+```
+
+We can see that there have been several splits and we have a reasonably sized tree. Looking back at the summary statistics we can see that there are two main pieces of information:
+
+1. Number of terminal nodes: the final number of splits in the full tree
+2. Misclassification error rate: the rate at which an observation has been misclassified
+
+We can see that the number of terminal nodes (30) is more than 2.5 times the number of classification groups (12). Also we can see that the misclassification error rate is very, which indicates that this initial model isn't going to be very useful for any new observations we get.
+
+Let's take a look at some of the response levels and compare to the original values. This is contained within the *frame* object in our classification tree object.
+
+```{r classification_4, warning=FALSE, message=FALSE}
+# View the first 10 rows of the month and classified month
+cbind(rainfall_data_class$month, tree_model$frame$yval)[1:20,]
+```
+
+The final piece of information to inspect is also in the *frame* object and is the deviance of the node. If we were to prune the tree by re-combining branches back together then we could manually check the deviances of each node and prune accordingly, or apply another statistical process to do this in a systematic fashion.
+
+```{r classification_5, warning=FALSE, message=FALSE}
+# Pruning the tree according to the best number of terminal nodes
+tree_model_2 <- prune.misclass(tree_model, best = 12)
+
+# Plotting the pruned tree
+plot(tree_model_2)
+
+summary(tree_model_2)
+```
+
+We can see that this tree makes more intuitive sense as the number of terminal nodes is now closer to the number of months. However the misclassification error rate has slightly increased. Overall we can say that there probably isn't enough natural deviation in the data to be able to make this simple classification model highly accurate.
+
+##### Challenge
+
+1. Run the tree model again (tree_model_3), but halve the *mindev* parameter. What happens? Why?
+2. Prune your newly created tree_model_3, but instead of specifying best, use the cost complexity parameter (you can look this up using ?prune.misclass in the console). What is the difference?
+
+```{r challenge_2, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+# 1. Run the tree model again (tree_model_3), but halve the *mindev* parameter. What happens? Why?
+tree_model_3 <- tree(formula = month ~ rainfall + latitude + longitude + elevation, data = rainfall_data_class, control = tree.control(mincut = 1, nobs = nrow(rainfall_data_class), mindev = 0.00005), x = TRUE, y = TRUE)
+
+# 2. Prune your newly created tree_model_3, but instead of specifying best, use the cost complexity parameter (you can look this up using ?prune.misclass in the console). What is the difference?
+tree_model_4 <- prune.misclass(tree_model_3)
+tree_model_4$k
+```
+
+### Cluster Analysis
+
+#### K-Means Clustering
+
+K-means clustering is a method that attempts to partition obsevations into into k distinct clusters. It achieves this by setting k points on the space, known as centroids. Then it assigns each observation to the nearest centroid. Once this is done is recalculates the positions of the centroids. This process is done iteratively until the centroids no longer update. In the below example, we will cluster the each weather station into 3 groups.
+
+Firstly we need to get a workable dataset. To do this we will simplify the data we have to just the name, latitude, longitude, elevation and total rainfall for each station.
+
+```{r cluser_1, warning=FALSE, message=FALSE}
+# Make the rainfall data suitable for cluster analysis
+rainfall_data_cluster <- as.data.frame(rainfall_data %>%
+                                         group_by(name, latitude, longitude, elevation) %>%
+                                         summarise(total_rainfall = sum(rainfall)))
+```
+
+To acutally run the cluster analysis, we will use the *cluster* package and specifically the *clara()* function in this library. For our cluster analysis, we are going to specify these 4 arguments:
+
+* x - The data frame
+* k - The number of clusters
+* metric - The method used to calculate the dissimilarity (distance) between observations
+* stand - A binary argument saying whether the data frame has been standardised
+
+Before we begin however we need to make sure we specify two things. Firstly, the initial centroids in a cluster analysis tend to be chosen randomly, so to ensure we create reproducible research we need to specify the random seed in R.
+
+```{r cluster_2, warning=FALSE, message=FALSE}
+set.seed(5)
+```
+
+Secondly, one of the drawbacks of k-means is that we need to specify how many clusters we want in advance. So how many clusters is the right number? We could repeat the analysis for all numbers of k, but this would take too long. Another option is to use the *NbClust* package to find the numerically optimal number of clusters. However for this example we will try and group our data into 3 distinct groups.
+
+Now we are ready to create the k-means model
+
+```{r cluster_3, warning=FALSE, message=FALSE}
+# Develop the cluster model
+cluster_model <- clara(rainfall_data_cluster, 3, metric = "euclidean", stand = FALSE)
+
+# Return the model
+cluster_model
+```
+
+We can see that this has returned a large amount of information, but the key points to inspect are:
+
+* Which observation was assigned to what cluster
+* The cluster means
+* Plotting the clusters to inspect with the original variables
+
+```{r cluster_4, warning=FALSE, message=FALSE}
+# Return the clustering vector
+cbind(rainfall_data_cluster$name ,cluster_model$clustering)
+```
+
+We can see that most of the weather stations have been assigned to cluster 1, with the remaining 4 being assigned equally to groups 2 and 3. This would indicate that Albury, Badgerys Creek, Canberra, Orange and Penrith seems to be more similar with each other than the other weather stations in general. Looking at the cluster means can help explain why this is.
+
+```{r cluster_5, warning=FALSE, message=FALSE}
+# Return the cluster means
+cluster_model$medoids
+```
+
+From inspecting the medoids, we can see that the main distinction for groups 1 and 2 from group 3 is that latitude and longitude. Then distinguishing between groups 1 and 2, group 1 has a higher elevation and lower total rainfall. Now we can attach the clusters back to our dataset and plot the data to visually inspect the results of the analysis.
+
+```{r cluster_6, warning=FALSE, message=FALSE}
+# Attach the clusters to the original dataset
+rainfall_data_cluster$clustering <- cluster_model$clustering
+
+# Show the updated dataset
+rainfall_data_cluster
+```
+Lets make a scatterplot of the location variables to see how the cluster analysis has seperated the weather stations from a geographical perspective.
+
+```{r cluster_7, warning=FALSE, message=FALSE}
+ggplot(data = rainfall_data_cluster, aes(x = longitude, y = latitude, colour = as.factor(clustering))) +
+  geom_point()
+```
+
+##### Challenge
+
+Using the above k-means clustering model, answer the following questions:
+
+1. Make the same scatterplot as above but with the total rainfall and elevation variables, what does this show?
+2. Return the dissimilarity matrix from the cluster analysis. Which two stations are the most different from each other?
+3. Make cluster_model_2 and change the argument stand to TRUE. What happpens? Why?
+
+```{r challenge_3, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+# 1. Make the same scatterplot as above but with the total rainfall and elevation variables, what does this show?
+ggplot(data = rainfall_data_cluster, aes(x = total_rainfall, y = elevation, colour = as.factor(clustering))) +
+  geom_point()
+
+# 2. Return the dissimilarity matrix from the cluster analysis. What does this show?
+cluster_model$diss
+
+# 3. Change the argument stand to TRUE. What happpens? Why?
+cluster_model_2 <- clara(rainfall_data_cluster, 3, metric = "euclidean", stand = TRUE)
+```
